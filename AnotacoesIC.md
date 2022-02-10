@@ -1,5 +1,5 @@
 Author= ofelippm
-Update_Date = 2022-05-02
+Update_Date = 2022-05-10
 
 # Projeto - PV Load Forecast
 
@@ -11,12 +11,24 @@ a possibilidade de planejamento de despacho melhor da Distribuidora além
 de possibilidade de equalizar o Fator de potência da aplicação, evitando
 multas e reduzindo os impactos na rede.
 
+    " Nesta pesquisa se desenvolverá um novo modelo de previsão de irradiância
+    solar para microrredes. Este modelo utiliza uma reduzida base de dados para
+    prever a irradiação solar com um dia de antecedência. O modelo considera 
+    dados passados de irradiância solar, irradiância de céu claro e 
+    complementações de informações para três regimes ou estados: regimes de 
+    alta, média e baixa energia para dias correspondentes a dias ensolarados, 
+    levemente nublados e extremamente nublados, respectivamente." TRUJILLO, Joel.
+
 ## Proposta
 
-Pelo curto histórico dos sistemas envolvidos, a proposta inicial se desenrola
-a partir dos chamados modelos físicos, da qual a partir de dados do tempo, 
-clima, níveis de irradiância e outros fatores, pode-se calcular a potência 
-gerada pelo sistema.
+A proposta inicial concentra-se na previsão de demanda de irradiância solar
+que incide sobre um dado sistema PV em uma dada região e com dados extras do
+ambiente, seja possível realizar o cálculo da potência ativa gerada pelo 
+sistema.
+
+Portanto será necessário a construçao da solução a partir dos chamados modelos
+físicos, da qual a partir de dados de irradiância, tempo, clima e outros 
+fatores, pode-se calcular a potência gerada pelo sistema.
 
 Além disso, pode-se simular cenários onde considera-se os erros de previsão
 a fim de ter-se os limites mínimos e máximos de geração e possibilidade de 
@@ -48,11 +60,18 @@ lidos:
 
 ---
 
+# Irradiância Solar
+
+A seção abaixo indica os artigos que utilizam técnicas de Machine Learning e
+Deep Learning para a previsão de irradiância solar em uma dada região e 
+posteriormente se calcula a carga gerada em um sistema PV.
+
+
 ## [01] Solar Irradiance Forecasting in Remote Microgrids Using Markov Switching Model
 
-10.1109/TSTE.2016.2629974 [doi]
-Ayush Shakya [Estudante]  
-Reinaldo Tonkoski [Professor]
+[doi] 10.1109/TSTE.2016.2629974  
+[Estudante] Ayush Shakya  
+[Professor] Reinaldo Tonkoski  
 
 ### Qual o tema tratado?
 
@@ -95,8 +114,155 @@ variável do modelo causal de forecasting de geração de energia elétrica PV.
 
 ---
 
+## [10][Applied_Energy]Novel_ML_Approach_PV_Forecast_Extra_Terrestrial_Solar_Irradiance
 
-## [02] Deep Neural Network Model Short Term Load Forecast
+[doi] https://doi.org/10.1016/j.apenergy.2021.118152 
+[Estudante] Zuansi Cai
+[Professor] Cornelia A. Fjelkestam Frederiksen
+
+### Qual o tema tratado?
+
+Forecasting de níveis de irradiância extra-terrestre utilizando métodos de 
+Machine Learning e acoplando variáveis de clima, realizar o calculo da potência
+gerada pelo sistema PV para 7 dias a frente com resolução de 30 minutos.
+
+
+### Qual a proposta de solução?
+
+A proposta reside num modelo de ML que teria como objetivo fazer o forecasting
+de níveis de irradiância solar fora da terra, ou seja, capturando a totalidade
+da irradiância e eliminando a correlação direta com o clima do local.
+
+O modelo de irradiância pura, chama-se ERAD (Slopped Extra-terrestrial 
+Irradiance) que será posteriormente acoplado a variáveis de condições 
+climáticas da região, podendo chegar nos níveis de irradiação locais.
+
+Os diferenciais são:
+* ERAD independe do tempo
+* Pode ser calculada para qualquer parte do globo  
+
+### Quais os resultados obtidos?
+
+Os resultados do ERAD são comparados a um modelo de irradiância utilizando as 
+mesmas variáveis que, porém com a diferença de que o modelo 'Irrad' é uma 
+irradiância modelada.
+
+O ERAD se comporta abaixo do modelo Irrad na maioria das estações, ficando até
+3 p.p. abaixo, utilizando a métrica nRMSE. Os resultados variam de acordo com 
+as estações do ano, o que é esperado.
+
+### Existe algo que pode ser reaproveitado?
+
+É interessante a abordagem do autor na previsão de irradiância excluindo os 
+efeitos climáticos, tipicamente regionais, e passando a caracterizar a queda de
+irradiância acoplando as variáveis de clima somente depois.
+
+* Criação de modelo de forecasting de irradiância solar
+* Acoplamento de variáveis climáticas
+* Modelo de forecasting de potência gerada
+
+### Informações Complementares
+
+Pontos de atenção:
+
+* Período previsto ainda não é o suficiente para o projeto (que seria de 30 
+dias)
+* Talvez seja interessante o estudo das variáveis que mais impactam nos 
+resultados do forecasting a fim de identificar as variáveis que podem ser 
+suprimidas ou substituídas por algumas de fácil acesso.
+
+---
+
+## [13][Renewable_Energy]Solar_irradiance_forecasting_without_onsite_training_measurements
+
+[doi] https://doi.org/10.1016/j.renene.2020.01.092  
+[Estudante] Andres Felipe Zambrano  
+[Professor] Luis Felipe Giraldo  
+
+### Qual o tema tratado?
+
+Previsão de uma região (*site*) que não possui dados suficientes de irradiância
+solar ou de outras variáveis climáticas, através de regiões vizinhas e que 
+podem ser consideradas como próximas.
+
+### Qual a proposta de solução?
+
+Ordena-se os sites mais 'próximos' tanto em distância, quanto em fatores 
+externos que possam ser mais similares ao site estudado sem dados.
+
+Variáveis externas selecionadas das regiões que possuem dados:
+1. Elevação
+2. latitude/longitude,
+3. Modelos de céu limpo
+4. Medidas de satellite da região de forecast
+5. Medidas de satelite das regiões vizinhas
+6. Irradiância Solar das regiões vizinhas
+
+* ANN para prever a Radiância solar de 1h a 48h nos sites próximos
+
+* Criação de Vetor 2D de irradiância usando GHI (Global horizontal irradiance),
+medidas de Satelite e CSM (Clear Sky Model), com configuração matricial sendo
+as coordenadas as datas e os horários -> feito para feature selection
+
+* Criação de métodos para a escolha dos sites mais próximos: 
+    * Principal Component Analysis (PCA)
+    * Learning to Rank
+    * Kernel Machines
+
+* Aplicação da distância de Mahalanobis ponderada
+
+
+### Quais os resultados obtidos?
+
+Olhando os gráficos da figura 2, os melhores resultados foram obtidos em 
+intervalos menores, como 1h e 2h, distanciando-se cada vez mais com o aumento
+do horizonte de tempo do forecast.
+
+Além disso, perde-se as variações intradiárias, ficando na média depois de um 
+período. O MAE passa de 44,5 W/m² (1h) até 63 W/m² (48h).
+
+A tabela 2 também é muito interessante por conta da importância de cada uma das
+features para o modelo de forecast.
+
+A métrica escolhida para a seleçao de qual site se aproxima mais do site sem dados
+é escolhida pelo MAE. 
+
+### Existe algo que pode ser reaproveitado?
+
+É interessante a possibilidade de se utilizar dados de lugares próximos,
+não necessariamente fisicamente, mas que tenham mais a dizer sobre a semelhança
+local. Pode ser um ponto de partida.
+
+### Informações Complementares
+
+---
+
+## [XX] 
+
+[doi]
+[Estudante]  
+[Professor]
+
+### Qual o tema tratado?
+
+### Qual a proposta de solução?
+
+### Quais os resultados obtidos?
+
+### Existe algo que pode ser reaproveitado?
+
+### Informações Complementares
+
+---
+
+# Forecasts variados
+
+A seção abaixo indica os artigos que utilizam técnicas de Machine Learning e
+Deep Learning para a previsão de demanda de carga gerada em um sistema PV 
+dispondo de dados históricos suficientes e/ou imagens de satélites.
+
+
+## [02][Energies]Deep Neural Network Model Short Term Load Forecast
 
 10.3390/en11123493 [doi]
 Chujie Tian [Estudante]  
@@ -599,6 +765,8 @@ Vector Regression), métodos de otimização que indicam os melhores
 hiperparâmetros de um modelo 
 
 ---
+
+
 
 ## [XX] 
 
