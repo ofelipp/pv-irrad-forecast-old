@@ -34,6 +34,13 @@ Além disso, pode-se simular cenários onde considera-se os erros de previsão
 a fim de ter-se os limites mínimos e máximos de geração e possibilidade de 
 alguma ação para minimizar os impactos na rede.
 
+## Perguntas
+
+1. Qual é a média de geração diária do sistema escolhido para o trabalho? 
+(Importante para entender se as métricas de erro estão dentro dos limites
+esperados.)
+
+
 ## Dificuldades
 
 * Curto período de histórico (2 meses)
@@ -232,6 +239,80 @@ A métrica escolhida para a seleçao de qual site se aproxima mais do site sem d
 É interessante a possibilidade de se utilizar dados de lugares próximos,
 não necessariamente fisicamente, mas que tenham mais a dizer sobre a semelhança
 local. Pode ser um ponto de partida.
+
+### Informações Complementares
+
+---
+
+## [16][Renewable_Energy]ShortTerm_global_horizontal_irradiance_forecasting_CNN_LSTM_model_spatiotemporal_correlations
+
+[doi] https://doi.org/10.1016/j.renene.2020.05.150  
+[Estudante] Haixiang Zang  
+[Professor] Ling Liu, Li Sun, Lilin Cheng, Zhinong Wei e Guoqiang Sun  
+
+### Qual o tema tratado?
+
+Combinação de técnicas de Deep Learning, CNN (Convulutional Neural Networking)
+e LSTM (Long Short-Term Memory), criando-se um modelo Híbrido para o forecast
+de irradiância horizontal global num dado *site*.
+
+### Qual a proposta de solução?
+
+CNN extrai as variáveis espaciais mais relevantes da *site* (região a ser 
+estudada) comparadas aos outros *sites* mais próximos ('vizinhos').
+
+LSTM tenta extrair a relação entre a irradiância solar e a série temporal do
+*site* estudado. 
+
+Posteriormente as features selecionadas na CNN são acopladas ao modelo de LSTM
+para que se possa realizar a previsão de irradiância horizontal global para uma
+hora a frente.
+
+Os dados inputados nos modelos, tem 1 ano de histórico, para 34 sites presentes
+em diversas localidades apresentando diferentes zonas climáticas, em diferentes
+estações e com diversidade de disposição de nuvens.
+
+### Quais os resultados obtidos?
+
+Os resultados do modelo híbrido CNN-LSTM são comparados com os modelos sozinhos
+CNN, LSTM e com alguns benchmarks.
+
+Os resultados anuais, nas diversas bases escolhidas, indicam que o modelo é o 
+melhor dentre os benchmarks de comparação, em todas as métricas, com exceção do
+*site* de Dallas que o modelo ANN-LSTM é ligeiramente melhor.
+
+Quando comparados os resultados por estação, os resultados variam 
+consideravelmente:
+* Outono é a estação com menor erro MAE e RMSE para todos os modelos
+* O modelo híbrido proposto é o melhor do *site* de San Jacinto
+* Dentre os modelos, os que melhor apresentam métricas, são os híbridos que se
+utilizam de Deep Learning.
+
+
+### Existe algo que pode ser reaproveitado?
+
+A utilização de DL (Deep Learning) para a extração de features (variáveis)
+metereológicas representativas, pode ser uma idea boa se comparada com as 
+outras regiões. Talvez um agrupamento seja necessário para saber quais são os
+sites mais 'próximos' entre si, quando se trata de variáveis meteorológicas.
+
+A maioria dos estudos indicam que a utilização de modelos híbridos se 
+sobressaem às técnicas convencionais de previsão. O único problema é a 
+quantidade e disponibilidade dos dados.
+
+Outra coisa que pode ser reaproveitada é como é feita a *hybridização* do 
+modelo proposto CNN-LSTM. [Procurar_Referências]
+
+
+Obs.: 
+
+* Existem dados suficientes no *site* estudado para se extrair a correlação com
+*sites* vizinhos e irradiância ao longo do tempo.
+
+* Autor diz que SVM (Support Vector Machine) tem boa performance para histórico
+com poucos dados.
+
+* Autor indica os softwares e máquina utilizada nos resultados do projeto.
 
 ### Informações Complementares
 
