@@ -244,6 +244,69 @@ local. Pode ser um ponto de partida.
 
 ---
 
+## [14][Renewable_Energy]AddedValue_ensemble_prediction_system_quality_solar_irradiance_probabilistic_forecasts
+
+[doi] https://doi.org/10.1016/j.renene.2020.07.042  
+[Estudante] Josselin Le Gal La Salle  
+[Professor] Jordi Badosa, Mathieu David, Pierre Pinson, Philippe Lauret  
+
+### Qual o tema tratado?
+
+Forecasting probabilístico de GHI (Global Horizontal Irradiance) considerando 
+variáveis climáticas calculadas por modelos NWP (Numerical Weather Prediction)
+
+
+### Qual a proposta de solução?
+
+Para 6 regiões diferentes (*sites*) que possuem condições de céu diferentes, 
+são realizados 3 modelos probabilisticos:
+
+1. Utilizando apenas dados inferidos do membro de controle do sistema EPS;
+2. Utilizando os dados do conjunto inteiro de membros do EPS, considerando
+apenas a média dos cenários.
+3. Utilizando os dados da maior parte do conjunto de membros do EPS, 
+considerando a média e a variância dos cenários.
+
+Além disso, seguem com duas linhas de resolução:
+
+1. Utilização de dados de output de modelos de NWP (determinísticos) acoplados
+a métodos estatísticos (Linear Quantile Regression e Analog Ensemble);
+
+2. Forecast baseado na calibração de um sistema EPS (Ensemble Prediction 
+System), onde podem ser aplicadas técnicas de tratamento do dado bruto, como a
+Regressão Não Homogênea, além da utilizaçao de métodos estatísticos para a 
+formação das probabilidades.
+
+
+### Quais os resultados obtidos?
+
+[Necessidade_Mais_Entendimento]
+
+A tabela 4 do autor, indica o RMSE de cada uma das etapas de criação dos 
+modelos. A calibração do EPS pela média de todos os membros é uma das métricas
+com menor erro RMSE associado, perdendo apenas para a utilização de apenas o 
+membro controle no site SP (o que configura uma exceção).
+
+### Existe algo que pode ser reaproveitado?
+
+Os EPS são sistemas bem complexos e computacionalmente custosos. Embora alguns
+dos dados estejam disponíveis para o uso, não sabemos se todos eles, ou se 
+todos os membros compartilham sua totalidade.
+
+### Informações Complementares
+
+EPS (Ensemble Prediction System) - Parece ser um modelo de cenários diferentes
+por variáveis associadas. Por exemplo, qual seria a sensibilidade da previsão
+quando uma das variáveis se altera? Esses são os tipos de cenário que podem ser
+criados e mensurados.
+
+CRPS (Continuous Ranked Probability Scores) - Sistema de rankeamento de 
+forecasts probabilísticos 
+
+
+---
+
+
 ## [16][Renewable_Energy]ShortTerm_global_horizontal_irradiance_forecasting_CNN_LSTM_model_spatiotemporal_correlations
 
 [doi] https://doi.org/10.1016/j.renene.2020.05.150  
