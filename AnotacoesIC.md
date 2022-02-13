@@ -1,5 +1,5 @@
-Author= ofelippm
-Update_Date = 2022-05-10
+Author= ofelippm  
+Update_Date = 2022-05-12
 
 # Projeto - PV Load Forecast
 
@@ -48,8 +48,6 @@ esperados.)
 ## Metodologia
 ### Fonte de Dados
 ### Modelo Escolhido
-
-
 
 ---
 
@@ -231,8 +229,8 @@ período. O MAE passa de 44,5 W/m² (1h) até 63 W/m² (48h).
 A tabela 2 também é muito interessante por conta da importância de cada uma das
 features para o modelo de forecast.
 
-A métrica escolhida para a seleçao de qual site se aproxima mais do site sem dados
-é escolhida pelo MAE. 
+A métrica escolhida para a seleçao de qual site se aproxima mais do site sem 
+dados é escolhida pelo MAE. 
 
 ### Existe algo que pode ser reaproveitado?
 
