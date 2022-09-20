@@ -1,6 +1,10 @@
 """
-Program to forecast load curve for Brazilian energy system, grouping by market
-sectors which are united by SIN.
+Program to forecast irradiance curve for Brazilian energy system, located in
+Santo Andre. The data are retrieved from SEMASA meteorologic stations.
+
+The topics from main function:
+    1. Data - Extraction
+    2. Data - Cleaning
 
 Author: ofelippm (felippe.matheus@aluno.ufabc.edu.br)
 """
@@ -8,65 +12,7 @@ Author: ofelippm (felippe.matheus@aluno.ufabc.edu.br)
 import pandas as pd
 from src import gdrive
 
-
 RAW = "data/raw/"
-
-
-def get_root_dir(df_files: pd.DataFrame) -> pd.Series:
-
-    """
-    Function to get root directory for every file in archive tree
-    """
-
-    # Initializing counter and condition
-    counter = 0
-    have_subdirs = True
-    df = df_files.copy()
-
-    # While statement to search for subdirs
-    while have_subdirs:
-
-        if counter == 0:
-            df[f"parents_parent{counter}"] = df["parents"].copy()
-
-        df[f"id_parent{counter}"] = df[f"parents_parent{counter}"].copy()
-
-        # Get parents ids and names to concat
-        df = pd.merge(
-            df,
-            df[["id", "name", "parents"]],
-            left_on=f"id_parent{counter}",
-            right_on="id",
-            how="left",
-            suffixes=["", f"_parent{counter+1}"],
-        )
-
-        # If all column is null, there's no other subdir
-        if df[f"id_parent{counter}"].notnull().sum() == 0:
-
-            df.fillna("", inplace=True)
-
-            # Concat every name from dirs above
-            df["root_dir"] = df[f"name_parent{counter-1}"]
-
-            for c in range(counter - 2, 0, -1):
-                df["root_dir"] += "_" + df[f"name_parent{c}"]
-
-            # Final treatments
-            df["root_dir"] = df["root_dir"].astype(str).str.lower()
-            df["root_dir"] = df["root_dir"].str.replace(
-                pat=r"\_{2,}", repl="", regex=True
-            )
-            df["root_dir"] = df["root_dir"].str.replace(
-                pat=r"\s+", repl="_", regex=True
-            )
-
-            # Change to False to finish loop
-            have_subdirs = False
-
-        counter += 1  # Increment
-
-    return df["root_dir"]
 
 
 def main():
@@ -88,18 +34,17 @@ def main():
         # export da previsão
     """
 
-    # Data - List Files
-    service = gdrive.connect(".cred_gdrive_ufabc.json")
+    # Data - List files
+    service = gdrive.connect("src/static.cred_gdrive_ufabc.json")
     ic_folders = gdrive.list_files_from_folder(service)
     ic_files = gdrive.list_nested_files(service, ic_folders)
+    ic_files_root_dir = gdrive.get_root_dir(ic_files)
 
-    # DataFrame containing all files
-    # df_ic_files=pd.read_csv('ids_files.csv', sep=';', decimal=',')
-
+    # Data - DataFrame containing all files
     df_ic_files = pd.DataFrame(ic_files)
-    df_ic_files["parents"] = df_ic_files["parents"].astype(str).str.slice(2, 35)
-    df_ic_files["root_dir"] = get_root_dir(df_ic_files)
+    df_ic_files["root_dir"] = ic_files_root_dir
 
+    # df_ic_files=pd.read_csv('ids_files.csv', sep=';', decimal=',')
     # df_ic_files.to_csv('ic_files.csv')
 
     # Data - Extract Files
