@@ -1,16 +1,23 @@
+"""
+Module to connect and get metadata and files from Google Drive.
+"""
+
+
 import io
+import json
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import pandas as pd
 
 
-DATA_IC_ID = ""
-SCOPES = [
-    # "https://www.googleapis.com/auth/drive.metadata.readonly",
-    "https://www.googleapis.com/auth/drive.file",
-    "https://www.googleapis.com/auth/drive.readonly",
-]
+with open("src/static/.ic_data_id.json", "r", encoding="utf8") as json_file:
+    _json_data_ic = json.load(json_file)
+
+    DATA_IC_ID = _json_data_ic["FOLDER_ID"]
+    SCOPES = _json_data_ic["SCOPES"]
+
+    del _json_data_ic
 
 
 def connect(cred_json: dict):
@@ -25,8 +32,7 @@ def connect(cred_json: dict):
     return service
 
 
-# @gdrive_connect
-def list_files_from_folder(service, folder_id: str = DATA_IC_ID):
+def list_files_from_folder(service, folder_id: str = DATA_IC_ID) -> list:
 
     """List all files from a folder"""
 
@@ -51,7 +57,7 @@ def list_files_from_folder(service, folder_id: str = DATA_IC_ID):
     return files
 
 
-def list_nested_files(service, folders: list) -> pd.DataFrame:
+def list_nested_files(service, folders: list) -> list:
 
     """List all files from directories and sub-directories"""
 
@@ -63,6 +69,7 @@ def list_nested_files(service, folders: list) -> pd.DataFrame:
 
         file = folders[counter]
 
+        actual_idx = folders.index(file)
         actual_folders_list.append(file)
 
         if "folder" not in file["mimeType"]:
@@ -71,9 +78,8 @@ def list_nested_files(service, folders: list) -> pd.DataFrame:
         nested_files = list_files_from_folder(service, file["id"])
 
         # Atualiza lista completa
-        folders = (
-            actual_folders_list + nested_files + folders[folders.index(file) + 1 :]
-        )
+        next_idx = actual_idx + 1
+        folders = actual_folders_list + nested_files + folders[next_idx:]
 
         # Incrementa contador
         counter += 1
@@ -81,7 +87,66 @@ def list_nested_files(service, folders: list) -> pd.DataFrame:
     return folders
 
 
-def download_IOfile(service, file_id: str, verbose=False):
+def get_root_dir(files: pd.DataFrame) -> list:
+
+    """
+    Function to get root directory for every file in archive tree
+    """
+
+    # DataFrame
+    df_files = pd.DataFrame(files).copy()
+    df_files["parents"] = df_files["parents"].astype(str).str.slice(2, 35)
+
+    # Search in subdirs - while statement
+    counter = 0
+    have_subdirs = True
+
+    while have_subdirs:
+
+        if counter == 0:
+            df_files[f"parents_parent{counter}"] = df_files["parents"].copy()
+
+        df_files[f"id_parent{counter}"] = df_files[f"parents_parent{counter}"].copy()
+
+        # Get parents ids and names to concat
+        df_files = pd.merge(
+            left=df_files,
+            right=df_files[["id", "name", "parents"]],
+            left_on=f"id_parent{counter}",
+            right_on="id",
+            how="left",
+            suffixes=["", f"_parent{counter+1}"],
+        )
+
+        # If all column is null, there's no other subdir
+        if df_files[f"id_parent{counter}"].notnull().sum() == 0:
+
+            df_files.fillna("", inplace=True)
+
+            # Concat every name from dirs above
+            df_files["root_dir"] = df_files[f"name_parent{counter-1}"]
+
+            for idx in range(counter - 2, 0, -1):
+                df_files["root_dir"] += "_" + df_files[f"name_parent{idx}"]
+
+            # Final treatments
+            df_files["root_dir"] = df_files["root_dir"].astype(str).str.lower()
+            df_files["root_dir"] = df_files["root_dir"].str.replace(
+                pat=r"\_{2,}", repl="", regex=True
+            )
+            df_files["root_dir"] = df_files["root_dir"].str.replace(
+                pat=r"\s+", repl="_", regex=True
+            )
+
+            # Change to False to finish loop
+            have_subdirs = False
+
+        counter += 1  # Increment
+
+    return df_files["root_dir"].to_list()
+
+
+def download_iofile(service, file_id: str, verbose=False) -> io.BytesIO:
 
     """Download a single file in IOBytes format"""
 
