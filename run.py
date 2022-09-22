@@ -8,9 +8,10 @@ The topics from main function:
 
 Author: ofelippm (felippe.matheus@aluno.ufabc.edu.br)
 """
-
+import os
 import pandas as pd
 from src import gdrive
+from src.dataprep import read_clean_file, skip_rows_file
 
 RAW = "data/raw/"
 
@@ -57,10 +58,26 @@ def main():
         if ("excel" in row["mimeType"]) | ("openxml" in row["mimeType"]):
             download_file = gdrive.download_IOfile(service, row["id"])
             excel = pd.read_excel(download_file)
-            # excel.to_parquet(f"{RAW}{row['root_dir']}_{row['name']}.parquet")
             excel.to_csv(f"{RAW}{row['root_dir']}_{row['name']}.csv")
         else:
             pass
+
+    # Data - Clean/Standardize
+    weather_data = pd.DataFrame()
+
+    for root, dirs, files in os.walk(RAW):
+        if root == RAW:
+            for file in files:
+                print(file)
+
+                skip_rows_file(f"{RAW}{file}")
+                df_standard = read_clean_file(f"{RAW}{file}")
+
+                weather_data = pd.concat([weather_data, df_standard])
+
+                del df_standard
+
+    weather_data.to_parquet("data/prc/weather_data.parquet", index=False)
 
 
 if __name__ == "__main__":
