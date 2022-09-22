@@ -5,6 +5,7 @@ Module destinated to clean an prepare dataset to train the model.
 import json
 import pandas as pd
 import re
+from unidecode import unidecode
 
 
 def skip_rows_file(filepath: str, pattern: str = "Data"):
@@ -48,11 +49,16 @@ def read_clean_file(filename: str) -> pd.DataFrame:
     # Read
     relatorio = pd.read_csv(filename)
 
-    # Rename columns in Dataframe
-    with open("src/static/metereological_variable_names.json") as json_file:
-        rename_dict = json.load(json_file)
+    # Rename columns in Dataframe using Regex
+    with open("src/static/metereological_variable_names_regex.json") as json_file:
+        rename_dict_rg = json.load(json_file)
 
-    relatorio.rename(columns=rename_dict, inplace=True)
+    for key, value in rename_dict_rg.items():
+        relatorio.columns = relatorio.columns.str.replace(key, value, regex=True)
+
+    # Remove duplicated columns
+    _mask = relatorio.columns.duplicated()
+    relatorio = relatorio.loc[:, ~_mask].copy()
 
     # Drop Index column and 'Unnamed' columns
     unnamed_cols = [col for col in relatorio.columns if "Unnamed" in col]
@@ -72,15 +78,21 @@ def read_clean_file(filename: str) -> pd.DataFrame:
     # Guarantee that has no columns with no data
     relatorio.dropna(axis=1, inplace=True, how="all")
 
-    # Remove duplicated columns
-    _mask = relatorio.columns.duplicated()
-    relatorio = relatorio.loc[:, ~_mask].copy()
-
     # Columns types
-    for col in relatorio.columns[1:]:
+    num_cols = [
+        col for col in relatorio.columns if (col != "Datetime") & (col != "Hour")
+    ]
+
+    for col in num_cols:
         relatorio[col] = pd.to_numeric(relatorio[col], errors="coerce")
 
     # Adding station name
-    relatorio["station"] = re.findall(r"\b\w+?(?=_\d)", filename)[0]
+    station_name = re.findall(r"\b\w+?(?=_\d)", filename)[0]
+    station_name = unidecode(station_name)
+
+    relatorio["Station"] = station_name
 
     return relatorio
+
+
+def prepare_dataset()
