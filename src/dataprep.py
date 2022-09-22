@@ -4,6 +4,7 @@ Module destinated to clean an prepare dataset to train the model.
 
 import json
 import pandas as pd
+import re
 
 
 def skip_rows_file(filepath: str, pattern: str = "Data"):
@@ -44,7 +45,14 @@ def read_clean_file(filename: str) -> pd.DataFrame:
 
     """
 
+    # Read
     relatorio = pd.read_csv(filename)
+
+    # Rename columns in Dataframe
+    with open("src/static/metereological_variable_names.json") as json_file:
+        rename_dict = json.load(json_file)
+
+    relatorio.rename(columns=rename_dict, inplace=True)
 
     # Drop Index column and 'Unnamed' columns
     unnamed_cols = [col for col in relatorio.columns if "Unnamed" in col]
@@ -54,26 +62,25 @@ def read_clean_file(filename: str) -> pd.DataFrame:
     relatorio.drop(columns=drop_cols, inplace=True)
 
     # Drop lines which has no data on date column
-    # TODO: If has 'Data' and 'Hour' columns ratter than 'Data /Hora' ? Example = tanquedetenção maio 2021
-
-    relatorio["Data / Hora"] = pd.to_datetime(
-        relatorio["Data / Hora"], dayfirst=True, errors="coerce"
+    relatorio["Datetime"] = pd.to_datetime(
+        relatorio["Datetime"], dayfirst=True, errors="coerce"
     )
 
-    _has_no_date = relatorio["Data / Hora"].isnull()
+    _has_no_date = relatorio["Datetime"].isnull()
     relatorio = relatorio[~_has_no_date].copy()
 
     # Guarantee that has no columns with no data
     relatorio.dropna(axis=1, inplace=True, how="all")
 
-    # Rename columns in Dataframe
-    with open("src/static/metereological_variable_names.json") as json_file:
-        rename_dict = json.load(json_file)
-
-    relatorio.rename(columns=rename_dict, inplace=True)
+    # Remove duplicated columns
+    _mask = relatorio.columns.duplicated()
+    relatorio = relatorio.loc[:, ~_mask].copy()
 
     # Columns types
     for col in relatorio.columns[1:]:
         relatorio[col] = pd.to_numeric(relatorio[col], errors="coerce")
+
+    # Adding station name
+    relatorio["station"] = re.findall(r"\b\w+?(?=_\d)", filename)[0]
 
     return relatorio
