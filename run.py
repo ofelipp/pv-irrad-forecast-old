@@ -8,6 +8,8 @@ The topics from main function:
 
 Author: ofelippm (felippe.matheus@aluno.ufabc.edu.br)
 """
+
+
 import os
 import pandas as pd
 from src import gdrive
@@ -22,8 +24,13 @@ def main():
     main function
 
     Topics:
-        1. leitura dos dados
-        # limpeza e tratamento dos valores
+        1. Data
+            1.1 List files
+            1.2 Dataframe containing all files
+            1.3 Extract files from GDrive
+            1.4 Clean/Standardize
+
+        2. Model
         # escolha do modelo
         # escolha da janela de treinamento
         # treinamento do modelo
@@ -45,10 +52,7 @@ def main():
     df_ic_files = pd.DataFrame(ic_files)
     df_ic_files["root_dir"] = ic_files_root_dir
 
-    # df_ic_files=pd.read_csv('ids_files.csv', sep=';', decimal=',')
-    # df_ic_files.to_csv('ic_files.csv')
-
-    # Data - Extract Files
+    # Data - Extract Files from GDrive
     _not_folder = ~df_ic_files["mimeType"].str.contains("folder")
 
     for idx, row in df_ic_files[_not_folder].iterrows():
@@ -68,16 +72,19 @@ def main():
     for root, dirs, files in os.walk(RAW):
         if root == RAW:
             for file in files:
-                print(file)
+                print(f"{file}")
 
                 skip_rows_file(f"{RAW}{file}")
-                df_standard = read_clean_file(f"{RAW}{file}")
 
-                weather_data = pd.concat([weather_data, df_standard])
+                weather_data = pd.concat(
+                    [weather_data, read_clean_file(f"{RAW}{file}")]
+                )
 
-                del df_standard
+    # weather_data.to_parquet("data/prc/weather_data.parquet", index=False)
 
-    weather_data.to_parquet("data/prc/weather_data.parquet", index=False)
+    # Statistics - NA quantities
+    # Statistics - Timeseries plots
+    # Statistics - Variables plots
 
 
 if __name__ == "__main__":
