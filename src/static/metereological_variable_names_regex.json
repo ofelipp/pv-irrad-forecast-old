@@ -1,6 +1,6 @@
 {
     "^Data.*": "Datetime",
-    "^Hora.*": "Hour",
+    "^[h|H]ora.*": "Hour",
     "^MIR1.*": "Relative_Umidity_perc",
     "\\bHR\\b": "Relative_Umidity_perc",
     "^Umidade.*": "Relative_Umidity_perc",

@@ -43,7 +43,6 @@ def read_clean_file(filename: str) -> pd.DataFrame:
         * Drop columns without data (all)
         * Rename the columns
         * Select the type for columns
-
     """
 
     # Read
@@ -67,13 +66,22 @@ def read_clean_file(filename: str) -> pd.DataFrame:
 
     relatorio.drop(columns=drop_cols, inplace=True)
 
-    # Drop lines which has no data on date column
+    # Treatment on date column
     relatorio["Datetime"] = pd.to_datetime(
         relatorio["Datetime"], dayfirst=True, errors="coerce"
     )
 
+    # Drop lines which has no data on date column
     _has_no_date = relatorio["Datetime"].isnull()
     relatorio = relatorio[~_has_no_date].copy()
+
+    # Adding Hour to Datetime column if exists
+    if "Hour" in relatorio.columns:
+        _mask = relatorio["Hour"].notnull()
+
+        relatorio.loc[_mask, "Datetime"] += pd.to_timedelta(
+            relatorio.loc[_mask, "Hour"]
+        )
 
     # Guarantee that has no columns with no data
     relatorio.dropna(axis=1, inplace=True, how="all")
@@ -86,6 +94,14 @@ def read_clean_file(filename: str) -> pd.DataFrame:
     for col in num_cols:
         relatorio[col] = pd.to_numeric(relatorio[col], errors="coerce")
 
+    # Removing columns which not corresponds to the mapping
+    unique_columns = list(set(rename_dict_rg.values()))
+    drop_cols = [col for col in relatorio.columns if col not in unique_columns]
+
+    print(f"Columns not founded in pattern:{drop_cols}")
+
+    relatorio.drop(columns=drop_cols, inplace=True)
+
     # Adding station name
     station_name = re.findall(r"\b\w+?(?=_\d)", filename)[0]
     station_name = unidecode(station_name)
@@ -93,6 +109,3 @@ def read_clean_file(filename: str) -> pd.DataFrame:
     relatorio["Station"] = station_name
 
     return relatorio
-
-
-def prepare_dataset()
