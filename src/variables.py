@@ -60,12 +60,13 @@ def season(model_data: pd.DataFrame, datetime_col: str) -> None:
         )
 
         # Condition
-        _starting = model_data[datetime_col] >= model_data[season + "_start"]
-        _ending = model_data[datetime_col] <= model_data[season + "_end"]
-        _between = _starting & _ending
+        _starting = (
+            model_data[datetime_col].dt.normalize() >= model_data[season + "_start"]
+        )
+        _ending = model_data[datetime_col].dt.normalize() <= model_data[season + "_end"]
 
         # Category
-        model_data.loc[_between, "Season"] = season[:6]
+        model_data.loc[_starting & _ending, "Season"] = season[:6]
 
         # Drop aux seasons columns
         _drop_cols = [season + "_start", season + "_end"]
@@ -75,7 +76,7 @@ def season(model_data: pd.DataFrame, datetime_col: str) -> None:
     model_data.drop(columns=["Year"], inplace=True)
 
 
-def possible_range(model_data: pd.DataFrame, var_col: str) -> np.ndarray:
+def possible_range(model_data: pd.DataFrame, var_col: str) -> np.array:
 
     """
     Variable values evaluated in a designed range
