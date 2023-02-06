@@ -74,7 +74,8 @@ def read_clean_file(filepath: str) -> pd.DataFrame:
 
     # Strandarlize Columns
     standard_columns(
-        data=relatorio, json_path="src/static/metereological_variable_names_regex.json"
+        data=relatorio,
+        json_path="src/static/metereological_variable_names_regex.json"
     )
 
     # Index column treatment
@@ -95,7 +96,8 @@ def read_clean_file(filepath: str) -> pd.DataFrame:
 
     # Numeric columns treatment
     num_cols = [
-        col for col in relatorio.columns if (col != "Datetime") & (col != "Hour")
+        col for col in relatorio.columns
+        if (col != "Datetime") & (col != "Hour")
     ]
 
     for col in num_cols:
@@ -115,6 +117,7 @@ def read_clean_file(filepath: str) -> pd.DataFrame:
 
     # Adding station name
     station_name = re.findall(r"\b\w+?(?=_\d)", filepath)[0]
+    station_name = re.sub(r"^\_+", "", station_name)
     station_name = unidecode(station_name)
 
     relatorio["Station"] = station_name
@@ -185,6 +188,7 @@ def blank_timeseries_dataset(
                 model_dataset.drop_duplicates(inplace=True)
                 del tmp
 
-        model_dataset["Datetime"] += pd.to_timedelta(model_dataset["Minute"], unit="m")
+        _delta = pd.to_timedelta(model_dataset["Minute"], unit="m")
+        model_dataset["Datetime"] += _delta
 
     return model_dataset
