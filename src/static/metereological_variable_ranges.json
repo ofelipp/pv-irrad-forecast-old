@@ -21,7 +21,7 @@
             "end": "12-31"
         }
     },
-    "Min_Temperature_C": {
+    "Dew_Temperature_C": {
         "autumn": {
             "min": 10.5,
             "max": 19.6
@@ -39,7 +39,7 @@
             "max": 19.0
         }
     },
-    "Max_Temperature_C": {
+    "Inner_Temperature_C": {
         "autumn": {
             "min": 23.0,
             "max": 28.1
@@ -59,38 +59,38 @@
     },
     "Air_Temperature_C": {
         "autumn": {
-            "min": -15.0,
-            "max": 40.0
+            "min": 10.5,
+            "max": 28.1
         },
         "winter": {
-            "min": -15.0,
-            "max": 40.0
+            "min": 4.0,
+            "max": 29.0
         },
         "spring": {
-            "min": -15.0,
-            "max": 40.0
+            "min": 11.6,
+            "max": 34.5
         },
         "summer": {
-            "min": -15.0,
-            "max": 40.0
+            "min": 13.8,
+            "max": 31.6
         }
     },
     "Thermic_Sensation_C": {
         "autumn": {
-            "min": -15.0,
-            "max": 40.0
+            "min": 10.5,
+            "max": 28.1
         },
         "winter": {
-            "min": -15.0,
-            "max": 40.0
+            "min": 4.0,
+            "max": 29.0
         },
         "spring": {
-            "min": -15.0,
-            "max": 40.0
+            "min": 11.6,
+            "max": 34.5
         },
         "summer": {
-            "min": -15.0,
-            "max": 40.0
+            "min": 13.8,
+            "max": 31.6
         }
     },
     "Relative_Umidity_perc": {
