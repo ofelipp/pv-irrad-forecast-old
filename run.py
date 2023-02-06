@@ -9,17 +9,16 @@ The topics from main function:
 Author: ofelippm (felippe.matheus@aluno.ufabc.edu.br)
 """
 
-
+import config
+from logging import debug, info, warning, error, critical
 import os
 import pandas as pd
-from src import gdrive, dataprep, variables
+from src.data import gdrive, dataprep, variables
 
-RAW = "data/raw/"
-PRC = "data/prc/"
-MDL = "data/model/"
 
-# TODO: Testar modificaçao de ordem da funcao dataprep com tanquedetencao 20-08
-
+# Configuration and global variables
+config.init()
+config.log()
 
 pd.set_option("display.max_columns", 20)
 
@@ -49,8 +48,11 @@ def main():
         # export da previsão
     """
 
+    # Data - Connect GDrive
+    _credentials = f"{config.PATHS['STATIC']}.cred_gdrive_ufabc.json"
+    service = gdrive.connect(_credentials)
+
     # Data - List files
-    service = gdrive.connect("src/static.cred_gdrive_ufabc.json")
     ic_folders = gdrive.list_files_from_folder(service)
     ic_files = gdrive.list_nested_files(service, ic_folders)
     ic_files_root_dir = gdrive.get_root_dir(ic_files)
@@ -58,33 +60,39 @@ def main():
     # Data - DataFrame containing all files
     df_ic_files = pd.DataFrame(ic_files)
     df_ic_files["root_dir"] = ic_files_root_dir
+    df_ic_files["root_dir"] = df_ic_files["root_dir"].str.replace(r"^\_+", "")
 
     # Data - Extract Files from GDrive
     _not_folder = ~df_ic_files["mimeType"].str.contains("folder")
 
     for idx, row in df_ic_files[_not_folder].iterrows():
 
-        print(idx, row["name"])
+        debug(idx, row["name"])
 
         if ("excel" in row["mimeType"]) | ("openxml" in row["mimeType"]):
             download_file = gdrive.download_iofile(service, row["id"])
             excel = pd.read_excel(download_file)
-            excel.to_csv(f"{RAW}{row['root_dir']}_{row['name']}.csv")
-        else:
-            pass
+
+            _output = "".join([
+                f"{config.PATHS['RAW_DATA']}",
+                f"{row['root_dir']}_{row['name']}.csv"
+            ])
+
+            excel.to_csv(_output)
 
     # Data - Clean/Standardize
     weather_data = pd.DataFrame()
 
-    for root, dirs, files in os.walk(RAW):
-        if root == RAW:
+    for root, dirs, files in os.walk(config.PATHS["RAW_DATA"]):
+        if root == config.PATHS["RAW_DATA"]:
             for file in files:
-                print(f"{file}")
+                debug(f"{file}")
 
-                dataprep.skip_rows_file(f"{RAW}{file}")
+                _abs_file_path = f"{config.PATHS['RAW_DATA']}{file}"
+                dataprep.skip_rows_file(_abs_file_path)
 
                 weather_data = pd.concat(
-                    [weather_data, dataprep.read_clean_file(f"{RAW}{file}")]
+                    [weather_data, dataprep.read_clean_file(_abs_file_path)]
                 )
 
     weather_data.drop(columns=["Hour"], inplace=True)
@@ -106,20 +114,25 @@ def main():
     _idx_cols = ["Station", "Date", "Hour", "Minute"]
     duplicated_data = dataprep.data_with_duplicates(weather_data, _idx_cols)
     duplicated_data.to_csv(
-        f"{PRC}duplicated_data.csv", sep=";", decimal=",", index=False
+        f"{config.PATHS['PRC_DATA']}duplicated_data.csv",
+        sep=";", decimal=",", index=False
     )
 
     # Drop duplicates, mantaining first
     weather_data.drop_duplicates(subset=_idx_cols, inplace=True)
 
     # Export Data
-    weather_data.to_parquet(f"{PRC}weather_data.parquet", index=False)
+    weather_data.to_parquet(
+        f"{config.PATHS['PRC_DATA']}weather_data.parquet", index=False
+    )
 
     # Model Dataset Creation --------------------------------------------------
 
     # Date parameters
     _min_date = weather_data["Datetime"].min().normalize()
-    _max_date = (weather_data["Datetime"].max() + pd.Timedelta(1, unit="d")).normalize()
+    _max_date = (
+        weather_data["Datetime"].max() + pd.Timedelta(1, unit="d")
+    ).normalize()
 
     model_dataset = dataprep.blank_timeseries_dataset(_min_date, _max_date)
 
@@ -146,8 +159,8 @@ def main():
         "Rain_mmh",
         "Wind_Speed_kmh",
         "Wind_Direction_dg",
-        "Min_Temperature_C",
-        "Max_Temperature_C",
+        "Dew_Temperature_C",
+        "Inner_Temperature_C",
         "Air_Temperature_C",
         "Thermic_Sensation_C",
         "Radiation_Wm2",
@@ -163,18 +176,27 @@ def main():
         suffixes=["", "_org"],
     )
 
-    model_dataset_filled.to_parquet(f"{MDL}model_dataset.parquet", index=False)
+    model_dataset_filled.to_parquet(
+        f"{config.PATHS['PRC_DATA']}model_dataset.parquet", index=False
+    )
 
     # Create Variables --------------------------------------------------------
 
     # Season
-    variables.season(model_dataset_filled, "Datetime")
+    model_dataset_filled["Season"] = variables.season(
+        model_datetime_data=model_dataset_filled["Datetime"]
+    )
 
     # Adjusting variables to possible ranges
     for dcol in _data_columns:
         model_dataset_filled[dcol] = variables.possible_range(
             model_data=model_dataset_filled, var_col=dcol
         )
+
+    # Export Ranged DataFrame
+    model_dataset_filled.to_parquet(
+        f"{config.PATHS['PRC_DATA']}model_dataset_ranged.parquet", index=False
+    )
 
 
 # Statistics - NA quantities
