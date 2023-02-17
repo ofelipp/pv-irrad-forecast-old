@@ -3,27 +3,20 @@ Module which objective is concat every variable create on model dataset
 for training the model.
 """
 
-import json
+from .io import json_to_dict
 import numpy as np
 import pandas as pd
 
-MTR_VARS_RANGES = "src/static/metereological_variable_ranges.json"
-
-
-def read_meteorological_vars_range(json_path=MTR_VARS_RANGES) -> dict:
-
-    """JSON file with variables ranges"""
-
-    with open(json_path, mode="r", encoding="utf8") as file:
-        return json.load(file)
+MTR_VARS_RANGES = "static/metereological_variable_ranges.json"
 
 
 def var_range(variable: str) -> pd.DataFrame:
 
     """Dataframe containing variable's choosed range"""
 
-    v_range = read_meteorological_vars_range()[variable]
-    return pd.DataFrame(v_range).transpose()
+    return pd.DataFrame(
+        json_to_dict(MTR_VARS_RANGES)[variable]
+    ).transpose()
 
 
 def season(model_datetime_data: pd.Series) -> np.ndarray:
@@ -47,7 +40,7 @@ def season(model_datetime_data: pd.Series) -> np.ndarray:
     df_season["Year"] = df_season[datetime_col].dt.strftime("%Y")
 
     # Filling df_season with season info
-    for name, period in read_meteorological_vars_range()["seasons"].items():
+    for name, period in json_to_dict(MTR_VARS_RANGES)["seasons"].items():
         print(name, period)
 
         # Creating series with season start date
