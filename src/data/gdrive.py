@@ -2,22 +2,18 @@
 Module to connect and get metadata and files from Google Drive.
 """
 
-
-import io
-import json
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+import io
+from .io import json_to_dict
 import pandas as pd
 
 
-with open("src/static/.ic_data_id.json", "r", encoding="utf8") as json_file:
-    _json_data_ic = json.load(json_file)
+_id_filepath = "../static/.ic_data_id.json"
 
-    DATA_IC_ID = _json_data_ic["FOLDER_ID"]
-    SCOPES = _json_data_ic["SCOPES"]
-
-    del _json_data_ic
+DATA_IC_ID = json_to_dict(_id_filepath)["FOLDER_ID"]
+SCOPES = json_to_dict(_id_filepath)["SCOPES"]
 
 
 def connect(cred_json: dict):
