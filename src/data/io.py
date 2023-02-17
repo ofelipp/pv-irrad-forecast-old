@@ -8,21 +8,15 @@ and excel files and export the final product into
 import json
 import pickle
 import os
-import sys
 
-import ./config as config
+MODEL_ARTFACTS = "".join([PROJECT, "/models"])
 
-os.path.abspath(__file__)
-
-
-config.init()
-print(config.PATHS)
 
 def json_to_dict(path: str) -> dict:
 
     """ Function used to import json archive into python dictionary """
 
-    with open(path, "r+", "utf8") as json_file:
+    with open(path, mode="r+", encoding="utf8") as json_file:
         return json.load(json_file)
 
 
@@ -42,17 +36,6 @@ def list_dir_files(path: str) -> list:
     return all_files
 
 
-def save_artfact(model_to_save, model_name: str):
-
-    _filepath = f"{config.PATHS['MODEL_ARTFACTS']}{model_name}.pickle"
-
-    with open(_filepath, 'wb') as output_model:
-        pickle.dump(model_to_save, output_model)
-
-    assert os.path.isfile(_filepath) is True, \
-        f'Impossible to save {model_name} artfact not founded in {filepath}'
-
-
 def load_artfact(filepath):
 
     assert os.path.isfile(filepath) is True, \
@@ -60,3 +43,14 @@ def load_artfact(filepath):
 
     with open(filepath, 'rb') as input_model:
         return pickle.load(input_model)
+
+
+def save_artfact(model_to_save, model_name: str):
+
+    _filepath = f"{MODEL_ARTFACTS}/{model_name}.pickle"
+
+    with open(_filepath, 'wb') as output_model:
+        pickle.dump(model_to_save, output_model)
+
+    assert os.path.isfile(_filepath) is True, \
+        f'Impossible to save {model_name} artfact not founded in {_filepath}'
