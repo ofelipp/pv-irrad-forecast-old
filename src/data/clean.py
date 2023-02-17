@@ -2,11 +2,13 @@
 Module destinated to clean an prepare dataset to train the model.
 """
 
-import json
 import re
-import numpy as np
 import pandas as pd
 from unidecode import unidecode
+from .io import json_to_dict
+
+SOURCE = "".join([PROJECT, "/src"])
+STATIC = "".join([SOURCE, "/static"])
 
 
 def skip_rows_file(filepath: str, pattern: str = "Data"):
@@ -33,16 +35,17 @@ def skip_rows_file(filepath: str, pattern: str = "Data"):
         file.truncate()
 
 
-def standard_columns(data: pd.DataFrame, json_path: str):
-
+def standard_columns(
+    data: pd.DataFrame,
+    json_path: str = "../static/metereological_variable_names_regex.json"
+):
     """
     Function to rename DataFrame colums with json regex pattern and drop which
     one are not designed in json.
     """
 
     # Rename columns in Dataframe using Regex
-    with open(json_path, "r", encoding="utf-8") as json_file:
-        rename_dict_rg = json.load(json_file)
+    rename_dict_rg = json_to_dict(json_path)
 
     for key, value in rename_dict_rg.items():
         data.columns = data.columns.str.replace(key, value, regex=True)
@@ -73,10 +76,10 @@ def read_clean_file(filepath: str) -> pd.DataFrame:
     relatorio = pd.read_csv(filepath)
 
     # Strandarlize Columns
-    standard_columns(
-        data=relatorio,
-        json_path="src/static/metereological_variable_names_regex.json"
-    )
+    _json_met_vars = "".join([
+        STATIC, "metereological_variable_names_regex.json"
+    ])
+    standard_columns(data=relatorio, json_path=_json_met_vars)
 
     # Index column treatment
     relatorio["Datetime"] = pd.to_datetime(
@@ -142,53 +145,3 @@ def data_with_duplicates(data: pd.DataFrame, grb_cols: list) -> pd.DataFrame:
     dup.sort_values(by=["count"], ascending=False, inplace=True)
 
     return dup
-
-
-def blank_timeseries_dataset(
-    min_date: str, max_date: str, frequency: str = "m", resolution: int = 15
-) -> pd.DataFrame:
-
-    """
-    Function that returns a dataframe containing a timeseries dataset with a
-    date interval passed as arguments.
-
-    min_date: begining of timeserie
-    max_date: end of timeserie
-    frequency: minimum unit of Dataframe = ["d", "h", "m"]
-    resolution: the minimum interval between rows
-
-    """
-
-    # Model dataset creation from date range
-    if (frequency == "h") | (frequency == "m"):
-        model_dataset = pd.DataFrame(
-            {"Datetime": pd.date_range(min_date, max_date, freq="h")}
-        )
-    else:
-        model_dataset = pd.DataFrame(
-            {"Datetime": pd.date_range(min_date, max_date, freq=frequency)}
-        )
-
-    # Auxiliar columns
-    model_dataset["Date"] = model_dataset["Datetime"].dt.strftime("%Y-%m-%d")
-    model_dataset["Date"] = pd.to_datetime(model_dataset["Date"])
-
-    if (frequency == "h") | (frequency == "m"):
-        model_dataset["Hour"] = model_dataset["Datetime"].dt.strftime("%H")
-        model_dataset["Hour"] = pd.to_numeric(model_dataset["Hour"])
-
-    if (frequency == "m") and (resolution > 0):
-        for minute in np.arange(0, 60, resolution):
-            if minute == 0:
-                model_dataset["Minute"] = minute
-            else:
-                tmp = model_dataset.copy()
-                tmp["Minute"] = minute
-                model_dataset = pd.concat([model_dataset, tmp])
-                model_dataset.drop_duplicates(inplace=True)
-                del tmp
-
-        _delta = pd.to_timedelta(model_dataset["Minute"], unit="m")
-        model_dataset["Datetime"] += _delta
-
-    return model_dataset
