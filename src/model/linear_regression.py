@@ -13,7 +13,7 @@ from sklearn.linear_model import LinearRegression
 
 def calculate_feature_correlation(
     data: pd.DataFrame, feature: str, group: str, group_list: list = []
-) -> tuple(pd.DataFrame, dict):
+) -> tuple([pd.DataFrame, dict]):
 
     """ Calculate correlation on the same feature on a group of categories """
 
@@ -23,17 +23,19 @@ def calculate_feature_correlation(
     _cols = ["Datetime", group, feature]
 
     corr_feat = data[_condition][_cols].pivot_table(
-        index="Datetime", columns=group, values=feature
+        index="Datetime", columns=group
     ).corr()
 
-    corr_feat_melted = corr_feat.melt(col_level=1, value_name=feature)
-    _stations = corr_feat_melted[group].drop_duplicates().to_list()
-    corr_feat_melted[group + "_Pair"] = _stations * len(_stations)
+    corr_feat_melted = corr_feat.melt()
+    corr_feat_melted.columns = ["Feature", group, "Corr_Value"]
+
+    _group = corr_feat_melted[group].drop_duplicates().to_list()
+    corr_feat_melted[group + "_Pair"] = _group * len(_group)
 
     # DataFrame with available pairs and correlation values
     _available_pairs = (
-        (corr_feat_melted[feature] >= MIN_CORR)
-        & (corr_feat_melted[feature] < 1)
+        (corr_feat_melted["Corr_Value"] >= MIN_CORR)
+        & (corr_feat_melted["Corr_Value"] < 1)
     )
     corr_pairs = corr_feat_melted[_available_pairs].copy()
 
