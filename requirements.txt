@@ -12,3 +12,4 @@ pyarrow
 fastparquet
 unidecode
 seaborn
+scikit-learn
