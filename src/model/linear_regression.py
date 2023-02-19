@@ -1,51 +1,14 @@
 # ! ./venv/bin/python3.8
 
 """
-Script containing
+Script containing linear regression model construction, training and predict
+functions.
 """
 
-from data.io import save_artfact
 from logging import debug, info
 import numpy as np
-import pandas as pd
 from sklearn.linear_model import LinearRegression
-
-
-def calculate_feature_correlation(
-    data: pd.DataFrame, feature: str, group: str, group_list: list = []
-) -> tuple([pd.DataFrame, dict]):
-
-    """ Calculate correlation on the same feature on a group of categories """
-
-    MIN_CORR = 0.8
-
-    _condition = data[group].isin(group_list)
-    _cols = ["Datetime", group, feature]
-
-    corr_feat = data[_condition][_cols].pivot_table(
-        index="Datetime", columns=group
-    ).corr()
-
-    corr_feat_melted = corr_feat.melt()
-    corr_feat_melted.columns = ["Feature", group, "Corr_Value"]
-
-    _group = corr_feat_melted[group].drop_duplicates().to_list()
-    corr_feat_melted[group + "_Pair"] = _group * len(_group)
-
-    # DataFrame with available pairs and correlation values
-    _available_pairs = (
-        (corr_feat_melted["Corr_Value"] >= MIN_CORR)
-        & (corr_feat_melted["Corr_Value"] < 1)
-    )
-    corr_pairs = corr_feat_melted[_available_pairs].copy()
-
-    # Creating dictionary with available pairs
-    corr_dict = {}
-    for key in corr_pairs[group].unique():
-        _cond = corr_pairs[group] == key
-        corr_dict[key] = corr_pairs[_cond][group + "_Pair"].to_list()
-
-    return (corr_pairs, corr_dict)
+from src.data.io import save_artfact
 
 
 def linear_regression():
