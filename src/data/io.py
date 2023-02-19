@@ -20,6 +20,17 @@ def json_to_dict(path: str) -> dict:
         return json.load(json_file)
 
 
+def dict_to_json(dictionary: dict, path: str):
+
+    """ Function used to export dictionary in json format """
+
+    with open(path, mode="w", encoding="utf8") as json_file:
+        json.dump(dictionary, json_file, indent=4)
+
+    assert os.path.isfile(path) is True, \
+        f'Impossible to save json file.. not founded in {path}'
+
+
 def list_dir_files(path: str) -> list:
 
     """ Function which returns a list of filepaths in a directory """
