@@ -40,7 +40,7 @@ def train_linear_regression(
 
     info("Saving Model pickle...")
 
-    save_artfact(trained_lr, f"linear_regression{model_name}.pickle")
+    save_artfact(trained_lr, f"linear_regression{model_name}")
 
     return trained_lr
 
