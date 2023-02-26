@@ -1,0 +1,13 @@
+{
+    "ROOT": "choose/your/root/path/",
+    "DATA": {
+        "STATIC": "data/static/",
+        "RAW": "data/raw/",
+        "PRC": "data/prc/"
+    },
+    "DOC": "doc/",
+    "LOG": "log/",
+    "MODEL": "model/",
+    "SRC": "src/",
+    "TEST": "test/"
+}
