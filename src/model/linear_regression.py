@@ -5,10 +5,9 @@ Script containing linear regression model construction, training and predict
 functions.
 """
 
-from logging import debug, info
+from data.io import save_artfact
 import numpy as np
 from sklearn.linear_model import LinearRegression
-from src.data.io import save_artfact
 
 
 def linear_regression():
@@ -20,7 +19,7 @@ def linear_regression():
 
 def train_linear_regression(
     model: LinearRegression, features: np.ndarray, labels: np.ndarray,
-    model_name: str = ""
+    model_name: str, save_path: str
 ) -> LinearRegression:
 
     """ Train Linear Regression model to perform predictions """
@@ -40,13 +39,6 @@ def train_linear_regression(
 
     info("Saving Model pickle...")
 
-    save_artfact(trained_lr, f"linear_regression{model_name}")
+    save_artfact(trained_lr, f"linear_regression{model_name}", save_path)
 
     return trained_lr
-
-
-def predict_linear_regression():
-
-    """ Train Linear Regression Model """
-
-    return ...
