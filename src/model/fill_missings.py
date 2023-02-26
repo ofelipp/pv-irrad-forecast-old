@@ -6,29 +6,47 @@ regression model to fill missing values that appears on a feature along the
 time.
 """
 
-from logging import debug, warning
+from data.io import load_artfact
+from model.linear_regression import (
+    linear_regression, train_linear_regression
+)
 import numpy as np
 import os
 import pandas as pd
-from src.data.io import load_artfact
-from src.model.linear_regression import (
-    linear_regression, train_linear_regression
-)
 
 
 def calculate_feature_correlation(
-    data: pd.DataFrame, feature: str, group: str, group_list: list = [],
+    data: pd.DataFrame, feature: str, group: str, allowed_groups: list = None,
     index: str = "Datetime"
 ) -> tuple([pd.DataFrame, dict]):
 
     """
     Calculate correlation on the same feature on a group of categories
     This works only in one feature and at time.
+        Args:
+            data -
+                dataframe containing feature values and the group that will
+                be calculated
+            feature - feature column name containing its values
+            group - group column name that will be evaluated
+            allowed_groups -
+                list with group names to exclude not included values if theres
+                a restriction of which groups can be used
+            [opt] index - index used to pivot and calculate correlation coef
+
+        Output:
+            a **dataframe** containing pairs of groups and their correlation
+            coef and a **dict** containing feature, group name and the allowed
+            list of pair groups that can be used on linear regression.
+
     """
 
     MIN_CORR = 0.8
 
-    _allowed_groups = data[group].isin(group_list)
+    if allowed_groups is None:
+        allowed_groups = data[group].unique()
+
+    _allowed_groups = data[group].isin(allowed_groups)
     _cols = [index, group, feature]
 
     corr_feat = data[_allowed_groups][_cols].pivot_table(
@@ -99,6 +117,7 @@ def data_to_train(
 
     Usage Examples:
 
+        data = dataframe containing all this informations
         feature = "Air_Temperature_C"
         group = "Station"
         to_fill_group = "camilopolis"
@@ -135,6 +154,20 @@ def data_to_predict(
     group: str = "Station", index: str = "Datetime"
 ) -> np.ndarray:
 
+    """
+    From a 'feature' data and a 'group' (usualy 'Station') this function
+    separate the data to the prediction and feature group data. It returns a
+    tuple containing array with data used to predict missing values.
+
+    Usage Examples:
+
+        data = dataframe containing all this informations
+        feature = "Air_Temperature_C"
+        group = "Station"
+        to_fill_group = "camilopolis"
+        filled_group = dict_corr_feat_station[feature][to_fill_group]
+    """
+
     debug('Station to be predicted:\t', to_fill_group)
     debug('Stations used as variables:\t', filled_group)
 
@@ -168,7 +201,32 @@ def fill_missing_values_feature(
     flg_use_trained_model: bool = True
 ) -> pd.DataFrame:
 
-    """ """
+    """
+    Unit function to fill the missing specific feature values.
+
+    A liner multiple regression model is trained from a 'data'
+    dataframe for a specific 'feature' and 'to_fill_group'. From
+    this, the training data are composed by data from 'filled_group'
+    that can be retrieved by 'corr_dict'.
+
+    The ouptput is the 'data' dataframe with previous missing values
+    filled.
+
+    **Args**
+        data - dataframe containing index, group and feature infos
+        feature - feature name (column from 'data' dataframe)
+        to_fill_group - group name that will be filled
+        filled_group - list of group names that will be used to
+            fill another
+        group - group name (column from 'data' dataframe)
+        flg_use_trained_model - use trained model if exists
+
+    **Ouptut**
+        The 'data' dataframe with previous missing values filled
+
+
+
+    """
 
     _model_name = f"linear_regression_{feature}_{to_fill_group}.pickle"
     _model_path = f"../models/{_model_name}"
@@ -232,7 +290,19 @@ def fill_missing_values_feature(
     return data.drop(columns=feature + "_fill")
 
 
-def fill_missing_values(data: pd.DataFrame, corr_dict: dict) -> None:
+def fill_missing_values(data: pd.DataFrame, corr_dict: dict) -> pd.DataFrame:
+
+    """
+    Main function from 'fill_missings.py' script.
+    With a dictionary containing correlation coeficients 'corr_dict'
+    for each feature and the list of allowed groups, this function
+    is capable of predict the missing values on a 'data' dataframe.
+
+    **Args**
+        data - dataframe containing index, group and feature infos
+        corr_dict -  dictionary containing correlation coeficients
+            from each feature that can be predicted
+    """
 
     for feature in corr_dict.keys():
         debug("feature: {feature}\n")
