@@ -1,6 +1,8 @@
 *.vscode
 *__pycache__*
-.cred*
+/doc*
 /data*
-/logs*
+/log*
+/model*
 /venv*
+/src/exploratory*
