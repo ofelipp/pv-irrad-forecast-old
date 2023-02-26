@@ -9,8 +9,6 @@ import json
 import pickle
 import os
 
-MODEL_ARTFACTS = "".join([PROJECT, "/models"])
-
 
 def json_to_dict(path: str) -> dict:
 
@@ -56,12 +54,12 @@ def load_artfact(filepath):
         return pickle.load(input_model)
 
 
-def save_artfact(model_to_save, model_name: str):
+def save_artfact(model, model_name: str, path: str):
 
-    _filepath = f"{MODEL_ARTFACTS}/{model_name}.pickle"
+    _filepath = f"{path}/{model_name}.pickle"
 
     with open(_filepath, 'wb') as output_model:
-        pickle.dump(model_to_save, output_model)
+        pickle.dump(model, output_model)
 
     assert os.path.isfile(_filepath) is True, \
         f'Impossible to save {model_name} artfact not founded in {_filepath}'

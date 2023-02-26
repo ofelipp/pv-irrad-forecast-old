@@ -1,14 +1,17 @@
+# ! ./venv/bin/python3.8
+
 """
 Module destinated to clean an prepare dataset to train the model.
 """
 
-import re
+from config import project_paths
+from data.io import json_to_dict
 import pandas as pd
+import re
 from unidecode import unidecode
-from .io import json_to_dict
 
-SOURCE = "".join([PROJECT, "/src"])
-STATIC = "".join([SOURCE, "/static"])
+
+PATH = project_paths()
 
 
 def skip_rows_file(filepath: str, pattern: str = "Data"):
@@ -37,7 +40,9 @@ def skip_rows_file(filepath: str, pattern: str = "Data"):
 
 def standard_columns(
     data: pd.DataFrame,
-    json_path: str = "../static/metereological_variable_names_regex.json"
+    json_path: str = "".join([
+        PATH["DATA"]["STATIC"], "metereological_variable_names_regex.json"
+    ])
 ):
     """
     Function to rename DataFrame colums with json regex pattern and drop which
@@ -77,7 +82,8 @@ def read_clean_file(filepath: str) -> pd.DataFrame:
 
     # Strandarlize Columns
     _json_met_vars = "".join([
-        STATIC, "metereological_variable_names_regex.json"
+        PATH["ROOT"], PATH["DATA"]["STATIC"],
+        "metereological_variable_names_regex.json"
     ])
     standard_columns(data=relatorio, json_path=_json_met_vars)
 
@@ -131,8 +137,8 @@ def read_clean_file(filepath: str) -> pd.DataFrame:
 def data_with_duplicates(data: pd.DataFrame, grb_cols: list) -> pd.DataFrame:
 
     """
-    Function to return a pandas dataframe containing duplicates on selected
-    groupby columns setted by grb_cols.
+    Function to return a pandas dataframe containing duplicates on
+    selected groupby columns setted by grb_cols.
     """
 
     dup = data.copy()

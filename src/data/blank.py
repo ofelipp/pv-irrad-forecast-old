@@ -1,4 +1,12 @@
-def blank_timeseries_dataset(
+# ! ./venv/bin/python3.8
+
+""" Create templates script """
+
+import pandas as pd
+import numpy as np
+
+
+def timeseries_dataset(
     min_date: str, max_date: str, frequency: str = "m", resolution: int = 15
 ) -> pd.DataFrame:
 
