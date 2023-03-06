@@ -7,11 +7,11 @@ Author: ofelippm (felippe.matheus@aluno.ufabc.edu.br)
 """
 
 import config
-from data import blank, clean, features, gdrive, io
-from logging import debug, info
-from model import fill_missings
-import pandas as pd
-import os
+from data.pipeline import DataPipeline
+from logging import info
+# from model import fill_missings
+# import pandas as pd
+# import os
 
 config.log()
 
@@ -27,185 +27,133 @@ def main():
     """
     """
 
-    # Data - Connect GDrive
-    _credentials = f"{STATIC}.cred_gdrive_ufabc.json"
-    service = gdrive.connect(_credentials)
+    data_pipeline = DataPipeline()
+    data_pipeline.extract_files_gdrive(f"{STATIC}.cred_gdrive_ufabc.json")
+    data_pipeline.clean_rename_files()
+    data_pipeline.concatenate_files()
+    data_pipeline.add_features()
 
-    # Data - List files
-    ic_folders = gdrive.list_files_from_folder(service)
-    ic_files = gdrive.list_nested_files(service, ic_folders)
-    ic_files_root_dir = gdrive.get_root_dir(ic_files)
+    # # Verify duplicates on weather dataset
+    # _idx_cols = ["Station", "Date", "Hour", "Minute"]
+    # duplicated_data = clean.data_with_duplicates(weather_data, _idx_cols)
 
-    # Data - DataFrame containing all files
-    df_ic_files = pd.DataFrame(ic_files)
-    df_ic_files["root_dir"] = ic_files_root_dir
-    df_ic_files["root_dir"] = df_ic_files["root_dir"].str.replace(r"^\_+", "")
+    # duplicated_data.to_csv(
+    #     f"{PRC_DATA}duplicated_data.csv", sep=";", decimal=",", index=False
+    # )
 
-    # Data - Extract Files from GDrive
-    _not_folder = ~df_ic_files["mimeType"].str.contains("folder")
+    # # Drop duplicates, mantaining first
+    # weather_data.drop_duplicates(subset=_idx_cols, inplace=True)
 
-    for idx, row in df_ic_files[_not_folder].iterrows():
+    # # Export Data
+    # weather_data.to_parquet(
+    #     f"{PRC_DATA}weather_data.parquet", index=False
+    # )
 
-        debug(idx, row["name"])
+    # # Model Dataset Creation --------------------------------------------------
 
-        if ("excel" in row["mimeType"]) | ("openxml" in row["mimeType"]):
-            download_file = gdrive.download_iofile(service, row["id"])
-            excel = pd.read_excel(download_file)
+    # # Date parameters
+    # _min_date = weather_data["Datetime"].min().normalize()
+    # _max_date = (
+    #     weather_data["Datetime"].max() + pd.Timedelta(1, unit="d")
+    # ).normalize()
 
-            _output = f"{RAW_DATA}{row['root_dir']}_{row['name']}.csv"
-            excel.to_csv(_output)
+    # model_dataset = blank.timeseries_dataset(_min_date, _max_date)
 
-    # Data - Clean/Standardize
-    weather_data = pd.DataFrame()
+    # # Replicate Dataset for each station
+    # _stations = weather_data["Station"].unique()
 
-    for root, dirs, files in os.walk(RAW_DATA):
-        if root == RAW_DATA:
-            for file in files:
-                debug(f"{file}")
+    # for station in _stations:
+    #     if station == _stations[0]:
+    #         model_dataset["Station"] = station
+    #     else:
+    #         tmp = model_dataset.copy()
+    #         tmp["Station"] = station
+    #         model_dataset = pd.concat([model_dataset, tmp])
+    #         model_dataset.drop_duplicates(inplace=True)
+    #         del tmp
 
-                _abs_file_path = f"{RAW_DATA}{file}"
-                clean.skip_rows_file(_abs_file_path)
+    # model_dataset.sort_values(["Datetime", "Station"], inplace=True)
 
-                weather_data = pd.concat(
-                    [weather_data, clean.read_clean_file(_abs_file_path)]
-                )
+    # # Filling Model Dataset with variables ------------------------------------
 
-    weather_data.drop(columns=["Hour"], inplace=True)
-    weather_data.drop_duplicates(inplace=True)
-    weather_data.sort_values(by=["Station", "Datetime"], inplace=True)
+    # _data_columns = [
+    #     "Relative_Umidity_perc",
+    #     "Pressure_mBar",
+    #     "Rain_mmh",
+    #     "Wind_Speed_kmh",
+    #     "Wind_Direction_dg",
+    #     "Dew_Temperature_C",
+    #     "Inner_Temperature_C",
+    #     "Air_Temperature_C",
+    #     "Thermic_Sensation_C",
+    #     "Radiation_Wm2",
+    # ]
 
-    # Datetime Variables
-    weather_data["Date"] = weather_data["Datetime"].dt.strftime("%Y-%m-%d")
-    weather_data["Date"] = pd.to_datetime(weather_data["Date"])
+    # _merge_cols = ["Date", "Hour", "Minute", "Station"]
 
-    weather_data["Hour"] = weather_data["Datetime"].dt.strftime("%H")
-    weather_data["Hour"] = pd.to_numeric(weather_data["Hour"])
+    # model_dataset_filled = pd.merge(
+    #     left=model_dataset,
+    #     right=weather_data[_merge_cols + _data_columns],
+    #     on=_merge_cols,
+    #     how="left",
+    #     suffixes=["", "_org"],
+    # )
 
-    weather_data["Minute"] = weather_data["Datetime"].dt.strftime("%M")
-    weather_data["Minute"] = pd.to_numeric(weather_data["Minute"])
-    weather_data["Minute"] = (weather_data["Minute"] // 15) * 15
+    # model_dataset_filled.to_parquet(
+    #     f"{PRC_DATA}model_dataset.parquet", index=False
+    # )
 
-    # Verify duplicates on weather dataset
-    _idx_cols = ["Station", "Date", "Hour", "Minute"]
-    duplicated_data = clean.data_with_duplicates(weather_data, _idx_cols)
+    # # Create Variables --------------------------------------------------------
 
-    duplicated_data.to_csv(
-        f"{PRC_DATA}duplicated_data.csv", sep=";", decimal=",", index=False
-    )
+    # # Season
+    # model_dataset_filled["Season"] = features.season(
+    #     model_datetime_data=model_dataset_filled["Datetime"]
+    # )
 
-    # Drop duplicates, mantaining first
-    weather_data.drop_duplicates(subset=_idx_cols, inplace=True)
+    # # Adjusting variables to possible ranges
+    # for dcol in _data_columns:
+    #     model_dataset_filled[dcol] = features.possible_range(
+    #         model_data=model_dataset_filled, var_col=dcol
+    #     )
 
-    # Export Data
-    weather_data.to_parquet(
-        f"{PRC_DATA}weather_data.parquet", index=False
-    )
+    # # Export Ranged DataFrame
+    # model_dataset_filled.to_parquet(
+    #     f"{PRC_DATA}model_dataset_ranged.parquet", index=False
+    # )
 
-    # Model Dataset Creation --------------------------------------------------
+    # # Filling Missing Values --------------------------------------------------
 
-    # Date parameters
-    _min_date = weather_data["Datetime"].min().normalize()
-    _max_date = (
-        weather_data["Datetime"].max() + pd.Timedelta(1, unit="d")
-    ).normalize()
+    # feature_names = [
+    #     'Relative_Umidity_perc', 'Pressure_mBar', 'Rain_mmh', 'Wind_Speed_kmh',
+    #     'Wind_Direction_dg', 'Dew_Temperature_C', 'Inner_Temperature_C',
+    #     'Air_Temperature_C', 'Thermic_Sensation_C', 'Radiation_Wm2'
+    # ]
 
-    model_dataset = blank.timeseries_dataset(_min_date, _max_date)
+    # # Correlation Coeficient Calculation
+    # corr_df, corr_dict = fill_missings.correlation_features_stations(
+    #     data=model_dataset_filled, features_list=feature_names
+    # )
 
-    # Replicate Dataset for each station
-    _stations = weather_data["Station"].unique()
+    # # Saving
+    # io.dict_to_json(
+    #     dictionary=corr_dict,
+    #     path=f"{MDL_DATA}linear_regression_corr_feat_station.json"
+    # )
 
-    for station in _stations:
-        if station == _stations[0]:
-            model_dataset["Station"] = station
-        else:
-            tmp = model_dataset.copy()
-            tmp["Station"] = station
-            model_dataset = pd.concat([model_dataset, tmp])
-            model_dataset.drop_duplicates(inplace=True)
-            del tmp
+    # corr_df.to_csv(
+    #     f"{PRC_DATA}/fill_missings/correlation_coef_stations.csv",
+    #     sep=';', decimal=',', index=False
+    # )
 
-    model_dataset.sort_values(["Datetime", "Station"], inplace=True)
+    # # Filling
+    # model_dataset_filled_wito_nas = fill_missings.fill_missing_values(
+    #     data=model_dataset_filled, corr_dict=corr_dict
+    # )
 
-    # Filling Model Dataset with variables ------------------------------------
-
-    _data_columns = [
-        "Relative_Umidity_perc",
-        "Pressure_mBar",
-        "Rain_mmh",
-        "Wind_Speed_kmh",
-        "Wind_Direction_dg",
-        "Dew_Temperature_C",
-        "Inner_Temperature_C",
-        "Air_Temperature_C",
-        "Thermic_Sensation_C",
-        "Radiation_Wm2",
-    ]
-
-    _merge_cols = ["Date", "Hour", "Minute", "Station"]
-
-    model_dataset_filled = pd.merge(
-        left=model_dataset,
-        right=weather_data[_merge_cols + _data_columns],
-        on=_merge_cols,
-        how="left",
-        suffixes=["", "_org"],
-    )
-
-    model_dataset_filled.to_parquet(
-        f"{PRC_DATA}model_dataset.parquet", index=False
-    )
-
-    # Create Variables --------------------------------------------------------
-
-    # Season
-    model_dataset_filled["Season"] = features.season(
-        model_datetime_data=model_dataset_filled["Datetime"]
-    )
-
-    # Adjusting variables to possible ranges
-    for dcol in _data_columns:
-        model_dataset_filled[dcol] = features.possible_range(
-            model_data=model_dataset_filled, var_col=dcol
-        )
-
-    # Export Ranged DataFrame
-    model_dataset_filled.to_parquet(
-        f"{PRC_DATA}model_dataset_ranged.parquet", index=False
-    )
-
-    # Filling Missing Values --------------------------------------------------
-
-    feature_names = [
-        'Relative_Umidity_perc', 'Pressure_mBar', 'Rain_mmh', 'Wind_Speed_kmh',
-        'Wind_Direction_dg', 'Dew_Temperature_C', 'Inner_Temperature_C',
-        'Air_Temperature_C', 'Thermic_Sensation_C', 'Radiation_Wm2'
-    ]
-
-    # Correlation Coeficient Calculation
-    corr_df, corr_dict = fill_missings.correlation_features_stations(
-        data=model_dataset_filled, features_list=feature_names
-    )
-
-    # Saving
-    io.dict_to_json(
-        dictionary=corr_dict,
-        path=f"{MDL_DATA}linear_regression_corr_feat_station.json"
-    )
-
-    corr_df.to_csv(
-        f"{PRC_DATA}/fill_missings/correlation_coef_stations.csv",
-        sep=';', decimal=',', index=False
-    )
-
-    # Filling
-    model_dataset_filled_wito_nas = fill_missings.fill_missing_values(
-        data=model_dataset_filled, corr_dict=corr_dict
-    )
-
-    # Exporting
-    model_dataset_filled_wito_nas.to_parquet(
-        f"{PRC_DATA}model_dataset_filled_missings.parquet", index=False
-    )
+    # # Exporting
+    # model_dataset_filled_wito_nas.to_parquet(
+    #     f"{PRC_DATA}model_dataset_filled_missings.parquet", index=False
+    # )
 
     # Modeling ===============================================================
 
