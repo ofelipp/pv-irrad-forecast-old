@@ -6,12 +6,13 @@ Module destinated to clean an prepare dataset to train the model.
 
 from config import project_paths
 from data.io import json_to_dict
+from logging import debug, warning
 import pandas as pd
 import re
-from unidecode import unidecode
 
 
 PATH = project_paths()
+STATIC = "".join([PATH["ROOT"], PATH["DATA"]["STATIC"]])
 
 
 def skip_rows_file(filepath: str, pattern: str = "Data"):
@@ -38,16 +39,17 @@ def skip_rows_file(filepath: str, pattern: str = "Data"):
         file.truncate()
 
 
-def standard_columns(
-    data: pd.DataFrame,
-    json_path: str = "".join([
-        PATH["DATA"]["STATIC"], "metereological_variable_names_regex.json"
-    ])
+def rename_features(
+    filepath: str,
+    json_path: str = f"{STATIC}metereological_variable_names_regex.json"
 ):
     """
     Function to rename DataFrame colums with json regex pattern and drop which
     one are not designed in json.
     """
+
+    # Read
+    data = pd.read_csv(filepath)
 
     # Rename columns in Dataframe using Regex
     rename_dict_rg = json_to_dict(json_path)
@@ -58,13 +60,16 @@ def standard_columns(
     # Removing columns which not corresponds to the mapping
     unique_columns = list(set(rename_dict_rg.values()))
     drop_cols = [col for col in data.columns if col not in unique_columns]
-
-    print(f"Columns not founded in pattern:{drop_cols}")
-
     data.drop(columns=drop_cols, inplace=True)
 
+    debug(f"Shape:{data.shape}")
+    debug(f"Features:{data.columns}")
+    warning(f"Columns not founded in pattern:{drop_cols}")
 
-def read_clean_file(filepath: str) -> pd.DataFrame:
+    data.to_csv(filepath, index=False)
+
+
+def clean_file(filepath: str) -> pd.DataFrame:
 
     """
     Function with objective of read and clean the data from the file.
@@ -80,13 +85,6 @@ def read_clean_file(filepath: str) -> pd.DataFrame:
     # Read
     relatorio = pd.read_csv(filepath)
 
-    # Strandarlize Columns
-    _json_met_vars = "".join([
-        PATH["ROOT"], PATH["DATA"]["STATIC"],
-        "metereological_variable_names_regex.json"
-    ])
-    standard_columns(data=relatorio, json_path=_json_met_vars)
-
     # Index column treatment
     relatorio["Datetime"] = pd.to_datetime(
         relatorio["Datetime"], dayfirst=True, errors="coerce"
@@ -100,6 +98,9 @@ def read_clean_file(filepath: str) -> pd.DataFrame:
     relatorio.dropna(axis=1, inplace=True, how="all")
 
     # Remove duplicated columns
+    relatorio.columns = [
+        re.sub("\\.\\d$", "", col) for col in relatorio.columns
+    ]
     _mask = relatorio.columns.duplicated()
     relatorio = relatorio.loc[:, ~_mask].copy()
 
@@ -116,22 +117,13 @@ def read_clean_file(filepath: str) -> pd.DataFrame:
     if "Hour" in relatorio.columns:
         _mask = relatorio["Hour"].notnull()
 
-        relatorio.loc[_mask, "Datetime"] = relatorio.loc[
-            _mask, "Datetime"
-        ].dt.normalize()
+        relatorio.loc[_mask, "Datetime"] = relatorio.loc[_mask, "Datetime"]\
+            .dt.normalize()
 
-        relatorio.loc[_mask, "Datetime"] += pd.to_timedelta(
-            relatorio.loc[_mask, "Hour"]
-        )
+        relatorio.loc[_mask, "Datetime"] += \
+            pd.to_timedelta(relatorio.loc[_mask, "Hour"])
 
-    # Adding station name
-    station_name = re.findall(r"\b\w+?(?=_\d)", filepath)[0]
-    station_name = re.sub(r"^\_+", "", station_name)
-    station_name = unidecode(station_name)
-
-    relatorio["Station"] = station_name
-
-    return relatorio
+    relatorio.to_csv(filepath, index=False)
 
 
 def data_with_duplicates(data: pd.DataFrame, grb_cols: list) -> pd.DataFrame:
