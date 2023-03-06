@@ -6,13 +6,28 @@ for training the model.
 from config import project_paths
 from data.io import json_to_dict
 import datetime
+import ephem
+from logging import debug, info
 import numpy as np
 import pandas as pd
+import re
+from unidecode import unidecode
+
 
 PATH = project_paths()
 MTR_VARS_RANGES = "".join([
     PATH["ROOT"], PATH["DATA"]["STATIC"], "metereological_variable_ranges.json"
 ])
+
+
+def station(filepath: str) -> str:
+
+    """ Station name from file name """
+
+    station_name = re.findall(r"\b\w+?(?=_\d)", filepath)[0]
+    station_name = re.sub(r"^\_+", "", station_name)
+
+    return unidecode(station_name)
 
 
 def season(model_datetime_data: pd.Series) -> np.ndarray:
@@ -118,6 +133,7 @@ def datetime_variables(
     int_vars = []
 
     # Date variables
+    df_datetime["Date"] = pd.to_datetime(series_datetime).dt.normalize()
     df_datetime["Year"] = series_datetime.dt.strftime("%Y")
     df_datetime["Month"] = series_datetime.dt.strftime("%m")
     df_datetime["Day"] = series_datetime.dt.strftime("%d")
@@ -125,8 +141,9 @@ def datetime_variables(
 
     # Time variables
     df_datetime["Hour"] = series_datetime.dt.strftime("%H")
-    df_datetime["Minute"] = series_datetime.dt.strftime("%M")
-    int_vars += ["Hour", "Minute"]
+    df_datetime["Real_Minute"] = series_datetime.dt.strftime("%M")
+    df_datetime["Minute"] = (df_datetime["Real_Minute"] // 15) * 15
+    int_vars += ["Hour", "Real_Minute", "Minute"]
 
     # Transforming into integers
     for col in int_vars:
