@@ -32,6 +32,8 @@ def main():
     data_pipeline.clean_rename_files()
     data_pipeline.concatenate_files()
     data_pipeline.add_features()
+    data_pipeline.adjust_features_ranges()
+    data_pipeline.create_fill_model_dataset()
 
     # # Verify duplicates on weather dataset
     # _idx_cols = ["Station", "Date", "Hour", "Minute"]
@@ -47,78 +49,6 @@ def main():
     # # Export Data
     # weather_data.to_parquet(
     #     f"{PRC_DATA}weather_data.parquet", index=False
-    # )
-
-    # # Model Dataset Creation --------------------------------------------------
-
-    # # Date parameters
-    # _min_date = weather_data["Datetime"].min().normalize()
-    # _max_date = (
-    #     weather_data["Datetime"].max() + pd.Timedelta(1, unit="d")
-    # ).normalize()
-
-    # model_dataset = blank.timeseries_dataset(_min_date, _max_date)
-
-    # # Replicate Dataset for each station
-    # _stations = weather_data["Station"].unique()
-
-    # for station in _stations:
-    #     if station == _stations[0]:
-    #         model_dataset["Station"] = station
-    #     else:
-    #         tmp = model_dataset.copy()
-    #         tmp["Station"] = station
-    #         model_dataset = pd.concat([model_dataset, tmp])
-    #         model_dataset.drop_duplicates(inplace=True)
-    #         del tmp
-
-    # model_dataset.sort_values(["Datetime", "Station"], inplace=True)
-
-    # # Filling Model Dataset with variables ------------------------------------
-
-    # _data_columns = [
-    #     "Relative_Umidity_perc",
-    #     "Pressure_mBar",
-    #     "Rain_mmh",
-    #     "Wind_Speed_kmh",
-    #     "Wind_Direction_dg",
-    #     "Dew_Temperature_C",
-    #     "Inner_Temperature_C",
-    #     "Air_Temperature_C",
-    #     "Thermic_Sensation_C",
-    #     "Radiation_Wm2",
-    # ]
-
-    # _merge_cols = ["Date", "Hour", "Minute", "Station"]
-
-    # model_dataset_filled = pd.merge(
-    #     left=model_dataset,
-    #     right=weather_data[_merge_cols + _data_columns],
-    #     on=_merge_cols,
-    #     how="left",
-    #     suffixes=["", "_org"],
-    # )
-
-    # model_dataset_filled.to_parquet(
-    #     f"{PRC_DATA}model_dataset.parquet", index=False
-    # )
-
-    # # Create Variables --------------------------------------------------------
-
-    # # Season
-    # model_dataset_filled["Season"] = features.season(
-    #     model_datetime_data=model_dataset_filled["Datetime"]
-    # )
-
-    # # Adjusting variables to possible ranges
-    # for dcol in _data_columns:
-    #     model_dataset_filled[dcol] = features.possible_range(
-    #         model_data=model_dataset_filled, var_col=dcol
-    #     )
-
-    # # Export Ranged DataFrame
-    # model_dataset_filled.to_parquet(
-    #     f"{PRC_DATA}model_dataset_ranged.parquet", index=False
     # )
 
     # # Filling Missing Values --------------------------------------------------
