@@ -3,16 +3,17 @@ Module which objective is concat every variable create on model dataset
 for training the model.
 """
 
-from config import project_paths
+from config import project_paths, log
 from data.io import json_to_dict
 import datetime
-import ephem
+# import ephem
 from logging import debug, info
 import numpy as np
 import pandas as pd
 import re
 from unidecode import unidecode
 
+log()
 
 PATH = project_paths()
 MTR_VARS_RANGES = "".join([
@@ -30,7 +31,7 @@ def station(filepath: str) -> str:
     return unidecode(station_name)
 
 
-def season(model_datetime_data: pd.Series) -> np.ndarray:
+def season(datetime_series: pd.Series) -> np.ndarray:
     """
     Create Season variable using datetime column from pandas DataFrame
 
@@ -42,8 +43,9 @@ def season(model_datetime_data: pd.Series) -> np.ndarray:
     """
 
     # Create function dataframe
-    datetime_col = str(model_datetime_data.name)
-    df_season = pd.DataFrame({datetime_col: model_datetime_data})
+    datetime_col = str(datetime_series.name)
+    df_season = pd.DataFrame({datetime_col: datetime_series})
+    df_season[datetime_col] = pd.to_datetime(df_season[datetime_col])
     df_season[datetime_col] = df_season[datetime_col].dt.normalize()
 
     # Auxiliar columns
@@ -52,7 +54,7 @@ def season(model_datetime_data: pd.Series) -> np.ndarray:
 
     # Filling df_season with season info
     for name, period in json_to_dict(MTR_VARS_RANGES)["seasons"].items():
-        print(name, period)
+        debug(name, period)
 
         # Creating series with season start date
         df_season[name + "_start"] = pd.to_datetime(
@@ -78,13 +80,16 @@ def season(model_datetime_data: pd.Series) -> np.ndarray:
     return df_season["Season"].values
 
 
-def var_range(variable: str) -> pd.DataFrame:
+def var_range(variable: str = None) -> pd.DataFrame:
 
     """Dataframe containing variable's choosed range"""
 
-    return pd.DataFrame(
-        json_to_dict(MTR_VARS_RANGES)[variable]
-    ).transpose()
+    if variable is None:
+        return json_to_dict(MTR_VARS_RANGES)
+    else:
+        return pd.DataFrame(
+            json_to_dict(MTR_VARS_RANGES)[variable]
+        ).transpose()
 
 
 def possible_range(model_data: pd.DataFrame, var_col: str) -> np.array:
@@ -93,7 +98,7 @@ def possible_range(model_data: pd.DataFrame, var_col: str) -> np.array:
     Variable values evaluated in a designed range
     """
 
-    print(f"{var_col}")
+    debug(f"{var_col}")
 
     # Reading values from json file
     df_var_range = var_range(var_col)
@@ -111,7 +116,7 @@ def possible_range(model_data: pd.DataFrame, var_col: str) -> np.array:
     _below = df_var[var_col] < df_var["min"]
     _above = df_var[var_col] > df_var["max"]
 
-    print(f"Cases Below: {_below.sum()} | Cases Above: {_above.sum()}")
+    debug(f"Cases Below: {_below.sum()} | Cases Above: {_above.sum()}")
 
     return np.where(_below | _above, np.nan, df_var[var_col])
 
@@ -142,7 +147,9 @@ def datetime_variables(
     # Time variables
     df_datetime["Hour"] = series_datetime.dt.strftime("%H")
     df_datetime["Real_Minute"] = series_datetime.dt.strftime("%M")
-    df_datetime["Minute"] = (df_datetime["Real_Minute"] // 15) * 15
+    df_datetime["Minute"] = (
+        (pd.to_numeric(df_datetime["Real_Minute"]) // 15) * 15
+    )
     int_vars += ["Hour", "Real_Minute", "Minute"]
 
     # Transforming into integers
@@ -152,7 +159,9 @@ def datetime_variables(
     return df_datetime
 
 
-def calendar_variables(series_datetime: pd.Series) -> pd.DataFrame():
+def calendar_variables(
+    series_datetime: pd.Series, datetime_format="%Y-%m-%d"
+) -> pd.DataFrame():
 
     """
     Based on a Datetime serie create calendar variables indicating if there
@@ -166,13 +175,13 @@ def calendar_variables(series_datetime: pd.Series) -> pd.DataFrame():
     int_vars = []
 
     # Week
-    df_datetime["WeekDay"] = series_datetime.dt.dayofweek()
+    df_datetime["WeekDay"] = series_datetime.dt.strftime("%w")
     # df_datetime["WeekMonth"] = None # TODO
-    df_datetime["WeekYear"] = series_datetime.dt.isocalendar().week
-    int_vars += ["WeekDay", "WeekMonth", "WeekYear"]
+    df_datetime["WeekYear"] = series_datetime.dt.strftime("%U")
+    int_vars += ["WeekDay", "WeekYear"]
 
     # Year variable
-    df_datetime["YearDay"] = series_datetime.dt.dayofyear()
+    df_datetime["YearDay"] = series_datetime.dt.strftime("%j")
     int_vars += ["YearDay"]
 
     # Transforming into integers
@@ -182,13 +191,13 @@ def calendar_variables(series_datetime: pd.Series) -> pd.DataFrame():
     return df_datetime
 
 
-def easter_date(start_period: str, end_period: str) -> pd.Series():
+def easter_date(start_period: str, end_period: str) -> pd.Series:
 
     """ Calculates the Easter date between a period of datetimes """
 
     EQUINOX = ['03-21']
 
-    def next_full_moon_datetime(date: str) -> pd.Series():
+    def next_full_moon_datetime(date: str) -> np.array:
 
         """ Receive datetime and retrieves the next full moon datetime """
 
@@ -226,7 +235,7 @@ def easter_date(start_period: str, end_period: str) -> pd.Series():
     return pd.Series(next_full_moon + days_left_sunday)
 
 
-def carnival_date(easter_dates: pd.Series()) -> pd.Series:
+def carnival_date(easter_dates: pd.Series) -> pd.Series:
 
     """
     Returns Carnival dates passing a serie of Easter dates
@@ -242,7 +251,7 @@ def carnival_date(easter_dates: pd.Series()) -> pd.Series:
     return pd.to_datetime(easter_dates) - pd.to_timedelta(47, 'day')
 
 
-def ashes_wednesday(carnival_dates: pd.Series()) -> pd.Series:
+def ashes_wednesday(carnival_dates: pd.Series) -> pd.Series:
 
     """
     Returns Ashes Wednesday dates passing a serie of Carnival dates
@@ -253,7 +262,7 @@ def ashes_wednesday(carnival_dates: pd.Series()) -> pd.Series:
     return pd.to_datetime(carnival_dates) + pd.to_timedelta(1, 'day')
 
 
-def saint_friday(easter_dates: pd.Series()) -> pd.Series:
+def saint_friday(easter_dates: pd.Series) -> pd.Series:
 
     """
     Returns Saint Friday dates passing a serie of Easter dates
