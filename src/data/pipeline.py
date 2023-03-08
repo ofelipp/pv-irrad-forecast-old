@@ -4,13 +4,14 @@
 Module destinated to create a data pipeline with a class.
 """
 
-from config import project_paths
-from data import clean, gdrive, features
+from config import project_paths, log
+from data import blank, clean, gdrive, features
 from logging import debug, info, error  # warning, fatal
 from os import walk
 import pandas as pd
 from time import time
 
+log()
 
 PATH = project_paths()
 STATIC = "".join([PATH["ROOT"], PATH["DATA"]["STATIC"]])
@@ -25,9 +26,16 @@ class DataPipeline():
 
     def __init__(self):
         self.name = "DataPipeline"
-        self.files_gdrive_df = None
+
+        # Dataframes
+        self.files_gdrive = None
         self.features_raw = None
         self.features_prc = None
+
+        # Lists
+        self.features_names = []
+        self.features_calendar_names = []
+        self.features_weather_names = []
 
     def __repr__(self):
         "".join(["Inicializando"])
@@ -50,13 +58,13 @@ class DataPipeline():
         df_ic_files["root_dir"] = \
             df_ic_files["root_dir"].str.replace(r"^\_+", "", regex=True)
 
-        self.files_gdrive_df = df_ic_files.copy()
+        self.files_gdrive = df_ic_files.copy()
 
-        _not_folder = ~self.files_gdrive_df["mimeType"].str.contains("folder")
-        debug(f"Files number size:{self.files_gdrive_df[_not_folder].shape[0]}")
+        _not_folder = ~self.files_gdrive["mimeType"].str.contains("folder")
+        debug(f"Files number size:{self.files_gdrive[_not_folder].shape[0]}")
 
         debug("Extraction...")
-        for idx, row in self.files_gdrive_df[_not_folder].iterrows():
+        for idx, row in self.files_gdrive[_not_folder].iterrows():
 
             if ("excel" in row["mimeType"]) | ("openxml" in row["mimeType"]):
 
@@ -142,6 +150,7 @@ class DataPipeline():
 
     def add_features(self, use_existing: bool = True):
         info("Adding features")
+        _start = time()
 
         if (self.features_raw is None) & use_existing:
             try:
@@ -155,27 +164,109 @@ class DataPipeline():
                     "and concat) were applied."])
                 error(_msg, traceback)
 
-        self.features_raw["Datetime"]
-
-        debug("Datetime variables")
+        info("Datetime variables")
         self.features_prc = pd.concat([
             self.features_raw,
             features.datetime_variables(self.features_raw["Datetime"])
-        ])
+        ], axis=1)
 
+        info("Calendar variables")
+        self.features_prc = pd.concat([
+            self.features_prc,
+            features.calendar_variables(self.features_prc["Datetime"])
+        ], axis=1)
 
+        info("Season")
+        self.features_prc["Season"] = \
+            features.season(self.features_prc["Datetime"])
 
+        info("Adding variables names")
+        self.features_calendar_names += list(
+            features.datetime_variables(
+                self.features_raw["Datetime"][0:1]
+            ).columns
+        )
 
+        self.features_calendar_names += list(
+            features.calendar_variables(
+                self.features_prc["Datetime"][0:1]
+            ).columns
+        )
 
+        self.features_calendar_names += ["Season"]
+        self.features_names += self.features_calendar_names
+
+        _end = time()
+        info(f"Time Elapsed: {_end - _start} seconds")
 
     def adjust_features_ranges(self):
         info("Adjusting the range for each feature")
-        ...
+        _start = time()
 
+        self.features_weather_names = \
+            list(features.var_range().keys())[1:]
+
+        self.features_names += self.features_weather_names
+
+        for met_feat in self.features_weather_names:
+            self.features_prc[met_feat] = features.possible_range(
+                model_data=self.features_prc, var_col=met_feat
+            )
+
+        _end = time()
+        info(f"Time Elapsed: {_end - _start} seconds")
 
     def create_fill_model_dataset(self):
-        info("Concating all the files previously adjusted")
-        ...
+
+        info("Create empty model dataset with datetime index")
+
+        _start = time()
+
+        self.features_prc["Datetime"] = \
+            pd.to_datetime(self.features_prc["Datetime"])
+
+        _min_date = self.features_prc["Datetime"].min().normalize()
+        _max_date = (
+            self.features_prc["Datetime"].max() + pd.Timedelta(1, unit="d")
+        ).normalize()
+
+        _msg = "".join([
+            f"Min Date: {_min_date.strftime('%Y-%m-%d')}, "
+            f"Max Date: {_max_date.strftime('%Y-%m-%d')}"
+        ])
+
+        debug(_msg)
+
+        empty_model_dataset = blank.timeseries_dataset(_min_date, _max_date)
+
+        # Replicate Dataset for each station
+        _stations = self.features_prc["Station"].unique()
+
+        for station in _stations:
+            debug(f"{station}")
+
+            if station == _stations[0]:
+                empty_model_dataset["Station"] = station
+            else:
+                tmp = empty_model_dataset.copy()
+                tmp["Station"] = station
+                empty_model_dataset = pd.concat([empty_model_dataset, tmp])
+                empty_model_dataset.drop_duplicates(inplace=True)
+                del tmp
+
+        empty_model_dataset.sort_values(["Datetime", "Station"], inplace=True)
+
+        info("Filling empty model dataset with fetures from each station")
+
+        _merge_cols = ["Date", "Hour", "Minute", "Station"]
+
+        self.features_model = pd.merge(
+            left=empty_model_dataset, right=self.features_prc,
+            on=_merge_cols, how="left", suffixes=["", "_org"],
+        )
+
+        _end = time()
+        info(f"Time Elapsed: {_end - _start} seconds")
 
     def fill_missings(self):
         info("Identifying and filling missing values")
