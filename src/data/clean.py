@@ -15,7 +15,7 @@ PATH = project_paths()
 STATIC = "".join([PATH["ROOT"], PATH["DATA"]["STATIC"]])
 
 
-def skip_rows_file(filepath: str, pattern: str = "Data"):
+def skip_rows_file(filepath: str, pattern: str = "dat"):
 
     """
     Function used to remove initial lines which not corresponds to columns
@@ -30,7 +30,7 @@ def skip_rows_file(filepath: str, pattern: str = "Data"):
         for line in lines:
             if dt_encountred:
                 file.write(line)
-            elif pattern in line.strip("/n"):
+            elif pattern in line.lower().strip("/n"):
                 file.write(line)
                 dt_encountred = True
             else:
@@ -49,7 +49,13 @@ def rename_features(
     """
 
     # Read
-    data = pd.read_csv(filepath)
+    if "estacao_solar" in filepath:
+        data = pd.read_csv(
+            filepath, sep=';', decimal=',', encoding="latin-1",
+            low_memory=False
+        )
+    else:
+        data = pd.read_csv(filepath, low_memory=False)
 
     # Rename columns in Dataframe using Regex
     rename_dict_rg = json_to_dict(json_path)
@@ -83,7 +89,7 @@ def clean_file(filepath: str) -> pd.DataFrame:
     """
 
     # Read
-    relatorio = pd.read_csv(filepath)
+    relatorio = pd.read_csv(filepath, low_memory=False)
 
     # Index column treatment
     relatorio["Datetime"] = pd.to_datetime(
